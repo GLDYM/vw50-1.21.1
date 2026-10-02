@@ -1,22 +1,19 @@
 package com.sqzj.vw50.client.menu;
 
 import com.sqzj.vw50.common.registry.VWMenus;
-import com.sqzj.vw50.misc.misc.VWItemStacksResourceHandler;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.transfer.StacksResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.item.ResourceHandlerSlot;
 
 import java.util.UUID;
 
 public class SendRedEnvelopeMenu extends AbstractContainerMenu {
 
-    public final StacksResourceHandler<ItemStack, ItemResource> giftSlot = new VWItemStacksResourceHandler(1);
+    public final SimpleContainer giftSlot = new SimpleContainer(1);
     private final UUID senderUuid;
 
     public SendRedEnvelopeMenu(int containerId, Inventory inventory, FriendlyByteBuf buf) {
@@ -25,8 +22,25 @@ public class SendRedEnvelopeMenu extends AbstractContainerMenu {
 
     public SendRedEnvelopeMenu(int containerId, Inventory inventory, UUID senderUuid) {
         super(VWMenus.SEND_RED_ENVELOPE_MENU.get(), containerId);
-        this.addSlot(new ResourceHandlerSlot(this.giftSlot, this.giftSlot::set, 0, 96, 42));
-        this.addStandardInventorySlots(inventory, 24, 149);
+        this.addSlot(new Slot(this.giftSlot, 0, 96, 42) {
+            @Override
+            public int getMaxStackSize() {
+                return 256;
+            }
+
+            @Override
+            public int getMaxStackSize(ItemStack stack) {
+                return 256;
+            }
+        });
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 9; column++) {
+                this.addSlot(new Slot(inventory, column + row * 9 + 9, 24 + column * 18, 149 + row * 18));
+            }
+        }
+        for (int column = 0; column < 9; column++) {
+            this.addSlot(new Slot(inventory, column, 24 + column * 18, 207));
+        }
         this.senderUuid = senderUuid;
     }
 
@@ -38,7 +52,7 @@ public class SendRedEnvelopeMenu extends AbstractContainerMenu {
     public void removed(Player player) {
         super.removed(player);
         if (!player.level().isClientSide()) {
-            this.giftSlot.copyToList().forEach(carried -> dropOrPlaceInInventory(player, carried));
+            this.clearContainer(player, this.giftSlot);
         }
     }
 

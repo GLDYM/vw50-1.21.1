@@ -13,7 +13,7 @@ public class VWAttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> LAST_REPEAT_TIME = registerInteger("last_repeat_time");
 
     private static DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> registerInteger(String name) {
-        return ATTACHMENT_TYPES.register(name, () -> AttachmentType.builder(() -> 0).serialize(Codec.INT.fieldOf(name)).build());
+        return ATTACHMENT_TYPES.register(name, () -> AttachmentType.builder(() -> 0).serialize(Codec.INT).build());
     }
 
 }

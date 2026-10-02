@@ -1,7 +1,7 @@
 package com.sqzj.vw50.client.gui;
 
 import com.sqzj.vw50.common.envelope.RedEnvelopeStyleOptions;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.List;
  */
 public class RedEnvelopeStyleCatalog {
 
-    private final List<Identifier> iconIdentifiers;
+    private final List<ResourceLocation> iconIdentifiers;
 
     public RedEnvelopeStyleCatalog(ResourceManager resourceManager) {
         this.iconIdentifiers = this.loadIconIdentifiers(resourceManager);
@@ -23,7 +23,7 @@ public class RedEnvelopeStyleCatalog {
         return RedEnvelopeStyleOptions.CARD_COLORS;
     }
 
-    public List<Identifier> iconIdentifiers() {
+    public List<ResourceLocation> iconIdentifiers() {
         return this.iconIdentifiers;
     }
 
@@ -31,7 +31,7 @@ public class RedEnvelopeStyleCatalog {
         return Math.max(1, (this.iconIdentifiers.size() + RedEnvelopeStyleOptions.ICONS_PER_PAGE - 1) / RedEnvelopeStyleOptions.ICONS_PER_PAGE);
     }
 
-    public Identifier iconIdentifier(int index) {
+    public ResourceLocation iconIdentifier(int index) {
         if (this.iconIdentifiers.isEmpty()) {
             return RedEnvelopeStyleOptions.DEFAULT_ICON_IDENTIFIER;
         }
@@ -40,8 +40,8 @@ public class RedEnvelopeStyleCatalog {
         return this.iconIdentifiers.get(safeIndex);
     }
 
-    private List<Identifier> loadIconIdentifiers(ResourceManager resourceManager) {
-        List<Identifier> identifiers = resourceManager
+    private List<ResourceLocation> loadIconIdentifiers(ResourceManager resourceManager) {
+        List<ResourceLocation> identifiers = resourceManager
                 .listResources(RedEnvelopeStyleOptions.ICON_DIRECTORY,
                         identifier -> identifier.getPath().endsWith(".png"))
                 .keySet().stream().sorted().toList();

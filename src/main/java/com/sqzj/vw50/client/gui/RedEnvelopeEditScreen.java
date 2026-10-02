@@ -1,6 +1,5 @@
 package com.sqzj.vw50.client.gui;
 
-import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import com.sqzj.vw50.VW50;
 import com.sqzj.vw50.client.menu.SendRedEnvelopeMenu;
@@ -8,20 +7,16 @@ import com.sqzj.vw50.common.envelope.RedEnvelopeStyleOptions;
 import com.sqzj.vw50.client.widget.UniversalCheckbox;
 import com.sqzj.vw50.server.network.SendRedEnvelopePayload;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.NonNull;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,11 +27,11 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     private static final int SCREEN_WIDTH = 208;
     private static final int SCREEN_HEIGHT = 231;
 
-    private static final Identifier LOCATION = VW50.prefix("textures/gui/send_red_envelope.png");
-    private static final Identifier COLOR_POPUP = VW50.prefix("textures/gui/send_red_envelope_select_color.png");
-    private static final Identifier ICON_POPUP = VW50.prefix("textures/gui/send_red_envelope_select_icon.png");
-    private static final Identifier CHECKBOX_CHECKED = VW50.prefix("small_checkbox_checked");
-    private static final Identifier CHECKBOX_UNCHECKED = VW50.prefix("small_checkbox_unchecked");
+    private static final ResourceLocation LOCATION = VW50.prefix("textures/gui/send_red_envelope.png");
+    private static final ResourceLocation COLOR_POPUP = VW50.prefix("textures/gui/send_red_envelope_select_color.png");
+    private static final ResourceLocation ICON_POPUP = VW50.prefix("textures/gui/send_red_envelope_select_icon.png");
+    private static final ResourceLocation CHECKBOX_CHECKED = VW50.prefix("small_checkbox_checked");
+    private static final ResourceLocation CHECKBOX_UNCHECKED = VW50.prefix("small_checkbox_unchecked");
 
     private static final Component TOO_MANY_PLAYERS = Component.translatable("red_envelope.too_many_players").withStyle(ChatFormatting.RED);
     private static final Component PLAYER_MORE_THAN_ITEMS = Component.translatable("red_envelope.player_more_than_items").withStyle(ChatFormatting.RED);
@@ -78,7 +73,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     private static final int ICON_SELECTOR_Y = 73;
     private static final int SEND_X = 123;
     private static final int SEND_Y = 74;
-    private static final int SEND_W = 57;
+    private static final int SEND_W = 57; 
     private static final int SEND_H = 19;
     private static final int PREVIEW_X = 10;
     private static final int PREVIEW_Y = 104;
@@ -95,6 +90,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     private EditBox numberBox;
     private EditBox nameBox;
     private ImageButton sendButton;
+    private PropertyButton propertyButton;
     private boolean isLuckyMoney = true;
     private boolean returnWhenExpired = true;
     private boolean playerTooMany;
@@ -107,7 +103,9 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     private int iconPage;
 
     public RedEnvelopeEditScreen(SendRedEnvelopeMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, SCREEN_WIDTH, SCREEN_HEIGHT);
+        super(menu, inventory, title);
+        this.imageWidth = SCREEN_WIDTH;
+        this.imageHeight = SCREEN_HEIGHT;
     }
 
     @Override
@@ -115,7 +113,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         super.init();
         int x = this.leftPos;
         int y = this.topPos;
-        Pair<Identifier, Identifier> sprites = Pair.of(CHECKBOX_CHECKED, CHECKBOX_UNCHECKED);
+        Pair<ResourceLocation, ResourceLocation> sprites = Pair.of(CHECKBOX_CHECKED, CHECKBOX_UNCHECKED);
         this.styleCatalog = new RedEnvelopeStyleCatalog(this.minecraft.getResourceManager());
         this.selectedIconIndex = Math.clamp(this.selectedIconIndex, 0, this.styleCatalog.iconIdentifiers().size() - 1);
         this.titleBox = new EditBox(this.font, x + 49, y + 13, 110, 16, Component.empty());
@@ -131,26 +129,24 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         this.nameBox.setResponder(ignored -> this.updateSendButtonState(this.numberBox.getValue()));
         this.sendButton = new ImageButton(x + SEND_X, y + SEND_Y, SEND_W, SEND_H, SEND_BUTTON_SPRITES, this::sendRedEnvelope);
         this.addRenderableWidget(new UniversalCheckbox(x + LUCKY_X, y + LUCKY_Y, 16, 16,
-                sprites, true, (_, value) -> this.isLuckyMoney = value));
+                sprites, true, (button, value) -> this.isLuckyMoney = value));
         this.addRenderableWidget(new UniversalCheckbox(x + RETURN_X, y + RETURN_Y, 16,
-                sprites, (_, value) -> this.returnWhenExpired = value));
-        this.addRenderableWidget(CycleButton.builder(Property::getDescription, this.property)
-                .withValues(Property.values()).displayState(CycleButton.DisplayState.VALUE)
-                .withSprite((button, _) -> PROPERTY_BUTTON_SPRITES.get(button.isActive(), button.isHoveredOrFocused()))
-                .create(x + PROPERTY_X, y + PROPERTY_Y, PROPERTY_W, PROPERTY_H, Component.empty(), (_, value) -> this.updateProperty(value)));
+                sprites, (button, value) -> this.returnWhenExpired = value));
+        this.propertyButton = new PropertyButton(x + PROPERTY_X, y + PROPERTY_Y);
+        this.addRenderableWidget(this.propertyButton);
         List.of(this.titleBox, this.numberBox, this.nameBox, this.sendButton).forEach(this::addRenderableWidget);
         this.updateUIForType();
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         int luckyTextX = LUCKY_X - this.font.width(LUCKY_MONEY) - 3;
         int returnTextX = RETURN_X - this.font.width(DESTROY_ON_EXPIRED) - 3;
-        graphics.text(this.font, LUCKY_MONEY, luckyTextX, LUCKY_Y + 4, -1);
-        graphics.text(this.font, DESTROY_ON_EXPIRED, returnTextX, RETURN_Y + 4, -1);
-        graphics.text(this.font, SEND, SEND_X + (SEND_W - this.font.width(SEND)) / 2, SEND_Y + 5, -1);
-        graphics.text(this.font, COLOR, 25, 78, -1);
-        graphics.text(this.font, ICON, 73, 78, -1);
+        graphics.drawString(this.font, LUCKY_MONEY, luckyTextX, LUCKY_Y + 4, -1);
+        graphics.drawString(this.font, DESTROY_ON_EXPIRED, returnTextX, RETURN_Y + 4, -1);
+        graphics.drawString(this.font, SEND, SEND_X + (SEND_W - this.font.width(SEND)) / 2, SEND_Y + 5, -1);
+        graphics.drawString(this.font, COLOR, 25, 78, -1);
+        graphics.drawString(this.font, ICON, 73, 78, -1);
         this.renderSelectors(graphics);
         this.renderPreview(graphics);
         this.renderNameSuggestions(graphics);
@@ -158,41 +154,43 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     }
 
     @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, LOCATION,
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(LOCATION,
                 this.leftPos, this.topPos, 0.0F, 0.0F,
                 SCREEN_WIDTH, SCREEN_HEIGHT, 256, 256);
     }
 
     @Override
-    protected void extractTooltip(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        super.extractTooltip(graphics, mouseX, mouseY);
+    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        super.renderTooltip(graphics, mouseX, mouseY);
         if (this.playerTooMany && this.sendButton.isHovered()) {
-            graphics.setTooltipForNextFrame(this.font, TOO_MANY_PLAYERS, mouseX, mouseY);
+            graphics.renderTooltip(this.font, TOO_MANY_PLAYERS, mouseX, mouseY);
         } else if (this.playerMoreThanItems && this.sendButton.isHovered()) {
-            graphics.setTooltipForNextFrame(this.font, PLAYER_MORE_THAN_ITEMS, mouseX, mouseY);
+            graphics.renderTooltip(this.font, PLAYER_MORE_THAN_ITEMS, mouseX, mouseY);
         }
 
         if (this.iconPopupOpen) {
             int hovered = this.hoveredIconIndex(mouseX, mouseY);
             if (hovered >= 0) {
-                Identifier identifier = this.styleCatalog.iconIdentifier(hovered);
-                graphics.setTooltipForNextFrame(this.font, Component.literal(identifier.toString()).withStyle(ChatFormatting.DARK_GRAY), mouseX, mouseY);
+                ResourceLocation identifier = this.styleCatalog.iconIdentifier(hovered);
+                graphics.renderTooltip(this.font, Component.literal(identifier.toString()).withStyle(ChatFormatting.DARK_GRAY), mouseX, mouseY);
             }
         }
     }
 
     @Override
-    public boolean keyPressed(@NonNull KeyEvent event) {
-        if (this.titleBox.keyPressed(event) || this.numberBox.keyPressed(event) || this.nameBox.keyPressed(event)) return true;
-        return !event.isEscape() && (this.titleBox.isFocused() || this.numberBox.isFocused() || this.nameBox.isFocused()) || super.keyPressed(event);
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.titleBox.keyPressed(keyCode, scanCode, modifiers)
+                || this.numberBox.keyPressed(keyCode, scanCode, modifiers)
+                || this.nameBox.keyPressed(keyCode, scanCode, modifiers)) return true;
+        return keyCode != 256 && (this.titleBox.isFocused() || this.numberBox.isFocused() || this.nameBox.isFocused())
+                || super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
-        int mouseX = (int) event.x();
-        int mouseY = (int) event.y();
+    public boolean mouseClicked(double mouseXValue, double mouseYValue, int button) {
+        int mouseX = (int) mouseXValue;
+        int mouseY = (int) mouseYValue;
         if (this.handleColorPopupClick(mouseX, mouseY)) return true;
         if (this.handleIconPopupClick(mouseX, mouseY)) return true;
         if (this.isInsideScreen(mouseX, mouseY, COLOR_SELECTOR_X, COLOR_SELECTOR_Y, SELECTOR_SIZE, SELECTOR_SIZE)) {
@@ -222,7 +220,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
 
         this.colorPopupOpen = false;
         this.iconPopupOpen = false;
-        return super.mouseClicked(event, doubleClick);
+        return super.mouseClicked(mouseXValue, mouseYValue, button);
     }
 
     @Override
@@ -230,7 +228,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         this.updateUIForType();
     }
 
-    private void renderSelectors(GuiGraphicsExtractor graphics) {
+    private void renderSelectors(GuiGraphics graphics) {
         int color = this.selectedCardColor();
         graphics.fill(COLOR_SELECTOR_X + 2, COLOR_SELECTOR_Y + 2,
                 COLOR_SELECTOR_X + SELECTOR_SIZE - 2, COLOR_SELECTOR_Y + SELECTOR_SIZE - 2, color);
@@ -242,7 +240,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         this.renderIcon(graphics, this.selectedIconIdentifier(), ICON_SELECTOR_X + 2, ICON_SELECTOR_Y + 2, RedEnvelopeStyleOptions.ICON_TEXTURE_SIZE);
     }
 
-    private void renderPreview(GuiGraphicsExtractor graphics) {
+    private void renderPreview(GuiGraphics graphics) {
         int color = this.selectedCardColor();
         graphics.fill(PREVIEW_X, PREVIEW_Y, PREVIEW_X + PREVIEW_W, PREVIEW_Y + PREVIEW_H, color);
         graphics.fill(PREVIEW_X + 2, PREVIEW_Y + 2, PREVIEW_X + PREVIEW_W - 2, PREVIEW_Y + PREVIEW_H - 2, this.darken(color, 36));
@@ -261,11 +259,11 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
 
         int primaryText = this.readableTextColor(color, 0xFFFFD27A);
         int secondaryText = this.readableTextColor(color, 0xFFFFFF88);
-        graphics.text(this.font, title, PREVIEW_X + 30, PREVIEW_Y + 6, primaryText);
-        graphics.text(this.font, detail, PREVIEW_X + 30, PREVIEW_Y + 19, secondaryText);
+        graphics.drawString(this.font, title, PREVIEW_X + 30, PREVIEW_Y + 6, primaryText);
+        graphics.drawString(this.font, detail, PREVIEW_X + 30, PREVIEW_Y + 19, secondaryText);
     }
 
-    private void renderNameSuggestions(GuiGraphicsExtractor graphics) {
+    private void renderNameSuggestions(GuiGraphics graphics) {
         if (this.property != Property.EXCLUSIVE || !this.nameBox.isFocused()) return;
         List<String> names = this.matchingOnlineNames();
         int sx = EXTRA_X;
@@ -273,15 +271,21 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         for (int i = 0; i < names.size(); i++) {
             int y = sy + i * 12;
             graphics.fill(sx, y, sx + 88, y + 12, 0xEE2C1512);
-            graphics.text(this.font, names.get(i), sx + 3, y + 2, -1);
+            graphics.drawString(this.font, names.get(i), sx + 3, y + 2, -1);
         }
     }
 
-    private void renderPopups(GuiGraphicsExtractor graphics) {
+    private void renderPopups(GuiGraphics graphics) {
+        if (!this.colorPopupOpen && !this.iconPopupOpen) return;
+
+        // Popup textures overlap the preview area. Keep the whole popup in a
+        // higher GUI layer so text buffers cannot draw over its transparent edges.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 100.0F);
         if (this.colorPopupOpen) {
             int x = this.colorPopupX();
             int y = this.popupY();
-            graphics.blit(RenderPipelines.GUI_TEXTURED, COLOR_POPUP,
+            graphics.blit(COLOR_POPUP,
                     x, y, 0.0F, 0.0F, COLOR_POPUP_W,
                     COLOR_POPUP_H, COLOR_POPUP_W, COLOR_POPUP_H);
             int localIndex = this.selectedColorIndex;
@@ -294,7 +298,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         if (this.iconPopupOpen) {
             int x = this.iconPopupX();
             int y = this.popupY();
-            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICON_POPUP,
+            graphics.blit(ICON_POPUP,
                     x, y, 0.0F, 0.0F, ICON_POPUP_W, ICON_POPUP_H, ICON_POPUP_W, ICON_POPUP_H);
             int start = this.iconPage * RedEnvelopeStyleOptions.ICONS_PER_PAGE;
             for (int slot = 0; slot < RedEnvelopeStyleOptions.ICONS_PER_PAGE; slot++) {
@@ -308,6 +312,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
                 }
             }
         }
+        graphics.pose().popPose();
     }
 
     private boolean handleColorPopupClick(int mouseX, int mouseY) {
@@ -396,7 +401,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         if (this.minecraft.getConnection() == null) return List.of();
         String filter = this.nameBox.getValue().toLowerCase(Locale.ROOT);
         return this.minecraft.getConnection().getListedOnlinePlayers().stream()
-                .map(PlayerInfo::getProfile).map(GameProfile::name)
+                .map(PlayerInfo::getProfile).map(profile -> profile.getName())
                 .filter(name -> filter.isBlank() || name.toLowerCase(Locale.ROOT).contains(filter))
                 .limit(5).toList();
     }
@@ -449,9 +454,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
     }
 
     private int getGiftCount() {
-        return this.menu.giftSlot.copyToList().stream()
-                .filter(stack -> !stack.isEmpty())
-                .mapToInt(ItemStack::getCount).sum();
+        return this.menu.giftSlot.getItem(0).getCount();
     }
 
     private void updateProperty(Property property) {
@@ -472,7 +475,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
             case EXCLUSIVE -> SendRedEnvelopePayload.PropertyType.EXCLUSIVE;
         };
 
-        ClientPacketDistributor.sendToServer(new SendRedEnvelopePayload(
+        PacketDistributor.sendToServer(new SendRedEnvelopePayload(
                 title, playerCount, this.isLuckyMoney, this.returnWhenExpired, type,
                 propertyValue, this.selectedIconIdentifier(), this.selectedCardColor()));
     }
@@ -482,12 +485,12 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         return this.styleCatalog.cardColors().get(safeIndex);
     }
 
-    private Identifier selectedIconIdentifier() {
+    private ResourceLocation selectedIconIdentifier() {
         return this.styleCatalog.iconIdentifier(this.selectedIconIndex);
     }
 
-    private void renderIcon(GuiGraphicsExtractor graphics, Identifier identifier, int x, int y, int size) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, identifier,
+    private void renderIcon(GuiGraphics graphics, ResourceLocation identifier, int x, int y, int size) {
+        graphics.blit(identifier,
                 x, y, 0.0F, 0.0F, size, size,
                 RedEnvelopeStyleOptions.ICON_TEXTURE_SIZE,
                 RedEnvelopeStyleOptions.ICON_TEXTURE_SIZE);
@@ -533,7 +536,7 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
-    private void drawOutline(GuiGraphicsExtractor graphics, int left, int top, int right, int bottom, int color) {
+    private void drawOutline(GuiGraphics graphics, int left, int top, int right, int bottom, int color) {
         graphics.fill(left, top, right, top + 1, color);
         graphics.fill(left, bottom - 1, right, bottom, color);
         graphics.fill(left, top, left + 1, bottom, color);
@@ -564,8 +567,34 @@ public class RedEnvelopeEditScreen extends AbstractContainerScreen<SendRedEnvelo
         }
 
         @Override
-        public @NonNull String getSerializedName() {
+        public String getSerializedName() {
             return this.name;
+        }
+    }
+
+    private final class PropertyButton extends AbstractButton {
+
+        private PropertyButton(int x, int y) {
+            super(x, y, PROPERTY_W, PROPERTY_H, Component.empty());
+        }
+
+        @Override
+        public void onPress() {
+            Property[] values = Property.values();
+            RedEnvelopeEditScreen.this.updateProperty(values[(RedEnvelopeEditScreen.this.property.ordinal() + 1) % values.length]);
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            ResourceLocation sprite = PROPERTY_BUTTON_SPRITES.get(this.active, this.isHoveredOrFocused());
+            graphics.blitSprite(sprite, this.getX(), this.getY(), this.width, this.height);
+            graphics.drawCenteredString(RedEnvelopeEditScreen.this.font, RedEnvelopeEditScreen.this.property.getDescription(),
+                    this.getX() + this.width / 2, this.getY() + 3, 0xFFFFFFFF);
+        }
+
+        @Override
+        protected void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
         }
     }
 

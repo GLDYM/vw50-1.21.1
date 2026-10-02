@@ -10,14 +10,12 @@ import com.sqzj.vw50.server.network.RedEnvelopeSnapshot;
 import com.sqzj.vw50.server.network.RedEnvelopeSyncPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.GuiMessage;
+import net.minecraft.client.GuiMessageTag;
 import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.client.multiplayer.chat.GuiMessage;
-import net.minecraft.client.multiplayer.chat.GuiMessageSource;
-import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,7 +25,6 @@ public final class ClientRedEnvelopeManager {
     private static final Map<UUID, GuiMessage> CHAT_MESSAGES = new HashMap<>();
     private static final Map<UUID, RedEnvelopeSnapshot> SNAPSHOTS = new HashMap<>();
     private static final Set<UUID> FINISH_NOTICES = new HashSet<>();
-    @Nullable
     private static UUID selectedClaimListId = null;
 
     public static void handleSync(RedEnvelopeSyncPayload payload, IPayloadContext context) {
@@ -53,10 +50,9 @@ public final class ClientRedEnvelopeManager {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) return;
         MutableComponent message = Component.translatable(payload.message(), payload.amount());
-        minecraft.player.sendOverlayMessage(message.withStyle(payload.success() ? ChatFormatting.GOLD : ChatFormatting.RED));
+        minecraft.player.displayClientMessage(message.withStyle(payload.success() ? ChatFormatting.GOLD : ChatFormatting.RED), true);
     }
 
-    @Nullable
     public static RedEnvelopeSnapshot getSnapshot(UUID id) {
         return SNAPSHOTS.get(id);
     }
@@ -115,15 +111,14 @@ public final class ClientRedEnvelopeManager {
         }
 
         ChatComponent chat = minecraft.gui.getChat();
-        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), makeChatContent(snapshot, layout), null, GuiMessageSource.SYSTEM_SERVER, GuiMessageTag.systemSinglePlayer());
+        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), makeChatContent(snapshot, layout), null, GuiMessageTag.systemSinglePlayer());
         GuiMessageExtraData data = GuiMessageExtraData.redEnvelope(snapshot);
         applyLayout(data, layout);
         GuiMessageAttachment.put(message, data);
         CHAT_MESSAGES.put(snapshot.id(), message);
-        if (chat.visibleMessageFilter.test(message)) {
-            chat.logChatMessage(message);
-            chat.addMessageToDisplayQueue(message);
-        }
+        chat.logChatMessage(message);
+        chat.addMessageToDisplayQueue(message);
+        chat.addMessageToQueue(message);
     }
 
     private static void addFinishNotice(Minecraft minecraft, RedEnvelopeSnapshot snapshot) {
@@ -131,13 +126,12 @@ public final class ClientRedEnvelopeManager {
         ChatComponent chat = minecraft.gui.getChat();
         String luckiest = getLuckiestClaims(snapshot).stream().map(ClaimSnapshot::playerName).collect(Collectors.joining("、"));
         Component content = Component.translatable("red_envelope.luck_king.notice", snapshot.title(), formatDuration(snapshot.elapsedTicks()), luckiest);
-        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), content, null, GuiMessageSource.SYSTEM_SERVER, GuiMessageTag.systemSinglePlayer());
+        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), content, null, GuiMessageTag.systemSinglePlayer());
         GuiMessageExtraData data = GuiMessageExtraData.finishNotice(snapshot);
         GuiMessageAttachment.put(message, data);
-        if (chat.visibleMessageFilter.test(message)) {
-            chat.logChatMessage(message);
-            chat.addMessageToDisplayQueue(message);
-        }
+        chat.logChatMessage(message);
+        chat.addMessageToDisplayQueue(message);
+        chat.addMessageToQueue(message);
     }
 
     private static String formatDuration(int ticks) {

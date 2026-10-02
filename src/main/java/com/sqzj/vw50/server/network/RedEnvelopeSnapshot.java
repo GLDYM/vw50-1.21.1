@@ -4,7 +4,7 @@ import com.sqzj.vw50.common.envelope.RedEnvelopeStyleOptions;
 import com.sqzj.vw50.common.envelope.RedEnvelopeRecord;
 import com.sqzj.vw50.common.envelope.RedEnvelopeStatus;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +27,12 @@ public record RedEnvelopeSnapshot(
         int remainingTicks,
         int elapsedTicks,
         boolean lucky,
-        Identifier iconIdentifier,
+        ResourceLocation iconIdentifier,
         int cardColor,
         List<ClaimSnapshot> claims,
         RedEnvelopeStatus status) {
 
-    public static final Identifier DEFAULT_ICON_IDENTIFIER = RedEnvelopeStyleOptions.DEFAULT_ICON_IDENTIFIER;
+    public static final ResourceLocation DEFAULT_ICON_IDENTIFIER = RedEnvelopeStyleOptions.DEFAULT_ICON_IDENTIFIER;
     public static final int DEFAULT_CARD_COLOR = 0xFFC83F2D;
 
     public RedEnvelopeSnapshot {
@@ -67,7 +67,7 @@ public record RedEnvelopeSnapshot(
         int remainingTicks = buf.readVarInt();
         int elapsedTicks = buf.readVarInt();
         boolean lucky = buf.readBoolean();
-        Identifier iconIdentifier = Identifier.STREAM_CODEC.decode(buf);
+        ResourceLocation iconIdentifier = ResourceLocation.STREAM_CODEC.decode(buf);
         int cardColor = buf.readInt();
         int claimCount = buf.readVarInt();
         List<ClaimSnapshot> claims = new ArrayList<>(claimCount);
@@ -97,7 +97,7 @@ public record RedEnvelopeSnapshot(
         buf.writeVarInt(this.remainingTicks);
         buf.writeVarInt(this.elapsedTicks);
         buf.writeBoolean(this.lucky);
-        Identifier.STREAM_CODEC.encode(buf, this.iconIdentifier);
+        ResourceLocation.STREAM_CODEC.encode(buf, this.iconIdentifier);
         buf.writeInt(this.cardColor);
         buf.writeVarInt(this.claims.size());
         for (ClaimSnapshot claim : this.claims) {

@@ -5,7 +5,6 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -23,7 +22,7 @@ public class SendRedEnvelopeMenuProvider implements MenuProvider {
     }
 
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+    public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
         return new SendRedEnvelopeMenu(containerId, inventory, this.senderUuid);
     }
 

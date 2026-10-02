@@ -40,7 +40,7 @@ public class ServerEventSubscriber {
             int maxPerMinute = RedEnvelopeService.getRepeatMaxPerMinute(event.getPlayer().server);
             int minIntervalMs = RedEnvelopeService.getRepeatMinIntervalMs(event.getPlayer().server);
             if (maxPerMinute > 0 || minIntervalMs > 0) {
-                Deque<Long> times = REPEAT_TIMES.computeIfAbsent(event.getPlayer().getUUID(), _ -> new ArrayDeque<>());
+                Deque<Long> times = REPEAT_TIMES.computeIfAbsent(event.getPlayer().getUUID(), uuid -> new ArrayDeque<>());
                 while (!times.isEmpty() && now - times.peekFirst() > 60_000L) times.removeFirst();
                 long last = LAST_REPEAT_TIME.getOrDefault(event.getPlayer().getUUID(), Long.MIN_VALUE / 2L);
                 boolean tooMany = maxPerMinute > 0 && times.size() >= maxPerMinute;

@@ -5,7 +5,7 @@ import com.sqzj.vw50.common.registry.VWCreativeModeTabs;
 import com.sqzj.vw50.common.registry.VWItems;
 import com.sqzj.vw50.common.registry.VWMenus;
 import com.sqzj.vw50.common.registry.VWParticleTypes;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 
@@ -24,8 +24,8 @@ public class VW50 {
         VWParticleTypes.PARTICLE_TYPES.register(modEventBus);
     }
 
-    public static Identifier prefix(String name) {
-        return Identifier.fromNamespaceAndPath(MOD_ID, name.toLowerCase(Locale.ROOT));
+    public static ResourceLocation prefix(String name) {
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, name.toLowerCase(Locale.ROOT));
     }
 
 }

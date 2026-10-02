@@ -91,13 +91,13 @@ public class VWLanguageProvider extends LanguageProvider {
 
     private void addKey(ResourceKey<?> key, String cn) {
         String type = key.registry().getPath();
-        String name = key.identifier().getPath();
+        String name = key.location().getPath();
         if (type.contains("/")) {
             String[] words = type.split("/");
             type = words[words.length - 1];
         }
 
-        String languageKey = type + "." + key.identifier().toLanguageKey();
+        String languageKey = type + "." + key.location().toLanguageKey();
         this.add(languageKey, this.getEnglishName(name), cn);
     }
 

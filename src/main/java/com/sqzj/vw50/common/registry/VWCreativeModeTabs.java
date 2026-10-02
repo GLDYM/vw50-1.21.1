@@ -20,7 +20,7 @@ public class VWCreativeModeTabs {
     static {
         TABS.register("normal_tab", () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup." + VW50.MOD_ID))
-                .icon(() -> new ItemStack(VWItems.EMPTY_RED_PACKET)).displayItems((_, output) -> {
+                .icon(() -> new ItemStack(VWItems.EMPTY_RED_PACKET)).displayItems((parameters, output) -> {
                     Stream<DeferredHolder<Item, ? extends Item>> stream = VWItems.ITEMS.getEntries().stream();
                     stream.map(Holder::value).map(ItemLike::asItem).forEach(output::accept);
                 }).build());

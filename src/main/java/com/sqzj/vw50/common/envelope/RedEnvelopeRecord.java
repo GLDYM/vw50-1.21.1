@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.sqzj.vw50.server.network.RedEnvelopeSnapshot;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ public class RedEnvelopeRecord {
     public String title;
     public String sign;
     public ItemStack stackPrototype;
-    public Identifier iconIdentifier;
+    public ResourceLocation iconIdentifier;
     public int cardColor;
     public int totalAmount;
     public int remainingAmount;
@@ -78,7 +78,7 @@ public class RedEnvelopeRecord {
             String title,
             String sign,
             ItemStack stackPrototype,
-            Identifier iconIdentifier,
+            ResourceLocation iconIdentifier,
             int cardColor,
             int totalAmount,
             int playerCount,
@@ -150,11 +150,11 @@ public class RedEnvelopeRecord {
         return value == null || value.isBlank() ? Optional.empty() : Optional.of(value);
     }
 
-    private static Identifier sanitizeIcon(Identifier iconIdentifier) {
+    private static ResourceLocation sanitizeIcon(ResourceLocation iconIdentifier) {
         return RedEnvelopeStyleOptions.normalizeIconIdentifier(iconIdentifier);
     }
 
-    public record Base(UUID id, UUID senderUuid, String senderName, String title, String sign, ItemStack stackPrototype, Identifier iconIdentifier, int cardColor, boolean systemEnvelope) {
+    public record Base(UUID id, UUID senderUuid, String senderName, String title, String sign, ItemStack stackPrototype, ResourceLocation iconIdentifier, int cardColor, boolean systemEnvelope) {
         private static final Codec<Base> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 UUIDUtil.CODEC.fieldOf("id").forGetter(Base::id),
                 UUIDUtil.CODEC.fieldOf("sender_uuid").forGetter(Base::senderUuid),
@@ -162,7 +162,7 @@ public class RedEnvelopeRecord {
                 Codec.STRING.fieldOf("title").forGetter(Base::title),
                 Codec.STRING.fieldOf("sign").forGetter(Base::sign),
                 ItemStack.CODEC.fieldOf("stack_prototype").forGetter(Base::stackPrototype),
-                Identifier.CODEC.optionalFieldOf("icon_item_id", RedEnvelopeSnapshot.DEFAULT_ICON_IDENTIFIER).forGetter(Base::iconIdentifier),
+                ResourceLocation.CODEC.optionalFieldOf("icon_item_id", RedEnvelopeSnapshot.DEFAULT_ICON_IDENTIFIER).forGetter(Base::iconIdentifier),
                 Codec.INT.optionalFieldOf("card_color", RedEnvelopeSnapshot.DEFAULT_CARD_COLOR).forGetter(Base::cardColor),
                 Codec.BOOL.fieldOf("system_envelope").forGetter(Base::systemEnvelope)
         ).apply(instance, Base::new));

@@ -1,10 +1,12 @@
 package com.sqzj.vw50.common.envelope;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.sqzj.vw50.VW50;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -17,15 +19,18 @@ public class RedEnvelopeSavedData extends SavedData {
     public static final int DEFAULT_REPEAT_MAX_PER_MINUTE = 6;
     public static final int DEFAULT_REPEAT_MIN_INTERVAL_MS = 1200;
 
-    public static final SavedDataType<RedEnvelopeSavedData> TYPE = new SavedDataType<>(
-            Identifier.fromNamespaceAndPath(VW50.MOD_ID, "red_envelopes"),
-            RedEnvelopeSavedData::new, RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<RedEnvelopeSavedData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                     RedEnvelopeRecord.CODEC.listOf().fieldOf("envelopes").forGetter(data -> data.envelopes),
                     PendingReturnRecord.CODEC.listOf().fieldOf("pending_returns").forGetter(data -> data.pendingReturns),
                     SendLimitRecord.CODEC.listOf().fieldOf("send_limits").forGetter(data -> data.sendLimits),
                     com.mojang.serialization.Codec.INT.optionalFieldOf("repeat_max_per_minute", DEFAULT_REPEAT_MAX_PER_MINUTE).forGetter(data -> data.repeatMaxPerMinute),
                     com.mojang.serialization.Codec.INT.optionalFieldOf("repeat_min_interval_ms", DEFAULT_REPEAT_MIN_INTERVAL_MS).forGetter(data -> data.repeatMinIntervalMs)
-            ).apply(instance, RedEnvelopeSavedData::new)));
+            ).apply(instance, RedEnvelopeSavedData::new));
+
+    public static final SavedData.Factory<RedEnvelopeSavedData> TYPE = new SavedData.Factory<>(
+            RedEnvelopeSavedData::new,
+            (tag, registries) -> CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag)
+                    .result().orElseGet(RedEnvelopeSavedData::new));
 
     public final List<RedEnvelopeRecord> envelopes = new ArrayList<>();
     public final List<PendingReturnRecord> pendingReturns = new ArrayList<>();
@@ -34,6 +39,13 @@ public class RedEnvelopeSavedData extends SavedData {
     public int repeatMinIntervalMs = DEFAULT_REPEAT_MIN_INTERVAL_MS;
 
     public RedEnvelopeSavedData() {}
+
+    @Override
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), this)
+                .result().ifPresent(encoded -> tag.merge((CompoundTag) encoded));
+        return tag;
+    }
 
     public RedEnvelopeSavedData(List<RedEnvelopeRecord> envelopes, List<PendingReturnRecord> pendingReturns, List<SendLimitRecord> sendLimits, int repeatMaxPerMinute, int repeatMinIntervalMs) {
         this.envelopes.addAll(envelopes);

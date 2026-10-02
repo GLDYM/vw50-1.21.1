@@ -5,7 +5,7 @@ import com.sqzj.vw50.common.envelope.RedEnvelopeStyleOptions;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public record SendRedEnvelopePayload(
         String title,
@@ -14,7 +14,7 @@ public record SendRedEnvelopePayload(
         boolean returnWhenExpired,
         PropertyType propertyType,
         String propertyValue,
-        Identifier iconIdentifier,
+        ResourceLocation iconIdentifier,
         int cardColor) implements CustomPacketPayload {
 
     public static final Type<SendRedEnvelopePayload> TYPE = new Type<>(VW50.prefix("send_red_envelope"));
@@ -38,7 +38,7 @@ public record SendRedEnvelopePayload(
                 buf.readBoolean(),
                 PropertyType.values()[buf.readVarInt()],
                 buf.readUtf(64),
-                Identifier.STREAM_CODEC.decode(buf),
+                ResourceLocation.STREAM_CODEC.decode(buf),
                 buf.readInt()
         );
     }
@@ -50,7 +50,7 @@ public record SendRedEnvelopePayload(
         buf.writeBoolean(this.returnWhenExpired);
         buf.writeVarInt(this.propertyType.ordinal());
         buf.writeUtf(this.propertyValue, 64);
-        Identifier.STREAM_CODEC.encode(buf, this.iconIdentifier);
+        ResourceLocation.STREAM_CODEC.encode(buf, this.iconIdentifier);
         buf.writeInt(this.cardColor);
     }
 

@@ -15,7 +15,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -25,21 +25,21 @@ import java.util.Comparator;
 
 public class RedEnvelopeCommands {
 
-    private static final SuggestionProvider<CommandSourceStack> ITEM_ID_SUGGESTIONS = (_, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> ITEM_ID_SUGGESTIONS = (context, builder) -> {
         String remaining = builder.getRemainingLowerCase();
         BuiltInRegistries.ITEM.keySet().stream()
-                .map(Identifier::toString)
+                .map(ResourceLocation::toString)
                 .filter(identifier -> identifier.contains(remaining))
                 .limit(80).forEach(builder::suggest);
         return builder.buildFuture();
     };
 
-    private static final SuggestionProvider<CommandSourceStack> ICON_IDENTIFIER_SUGGESTIONS = (_, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> ICON_IDENTIFIER_SUGGESTIONS = (context, builder) -> {
         builder.suggest(RedEnvelopeStyleOptions.DEFAULT_ICON_IDENTIFIER.toString());
         return builder.buildFuture();
     };
 
-    private static final SuggestionProvider<CommandSourceStack> COLOR_SUGGESTIONS = (_, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> COLOR_SUGGESTIONS = (context, builder) -> {
         RedEnvelopeStyleOptions.CARD_COLORS.stream()
                 .map(RedEnvelopeCommands::colorToHex)
                 .forEach(builder::suggest);
@@ -57,7 +57,7 @@ public class RedEnvelopeCommands {
                                                 IntegerArgumentType.getInteger(context, "playerCount"),
                                                 StringArgumentType.getString(context, "label"))))))
                 .then(Commands.literal("envelope")
-                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("label", StringArgumentType.word())
                                 .then(Commands.argument("item", StringArgumentType.word()).suggests(ITEM_ID_SUGGESTIONS)
                                         .then(Commands.argument("stackCount", IntegerArgumentType.integer(1, 999999))
@@ -82,7 +82,7 @@ public class RedEnvelopeCommands {
                                                                                         StringArgumentType.getString(context, "icon")),
                                                                                 parseColor(StringArgumentType.getString(context, "color")))))))))))
                 .then(Commands.literal("history").executes(context -> showHistory(context.getSource())))
-                .then(Commands.literal("permission").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.literal("permission").requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("cooldown")
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 3600))
@@ -97,7 +97,7 @@ public class RedEnvelopeCommands {
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(context -> setLimit(context.getSource(),
                                                 EntityArgument.getPlayer(context, "player"), 0, false)))))
-                .then(Commands.literal("repeatLimit").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.literal("repeatLimit").requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.argument("maxPerMinute", IntegerArgumentType.integer(0, 120))
                                 .executes(context -> setRepeatLimit(context.getSource(),
                                         IntegerArgumentType.getInteger(context, "maxPerMinute"),
@@ -132,7 +132,7 @@ public class RedEnvelopeCommands {
     }
 
     private static int sendEnvelopeCommand(CommandSourceStack source, String label, String itemId, int stackCount,
-                                           int playerCount, Identifier iconIdentifier, int color) {
+                                           int playerCount, ResourceLocation iconIdentifier, int color) {
         if (iconIdentifier == null) return 0;
         ServerPlayer player;
         try {
@@ -183,13 +183,13 @@ public class RedEnvelopeCommands {
     }
 
     private static Item resolveItem(String rawId) {
-        Identifier identifier = Identifier.tryParse(rawId == null ? "" : rawId);
+        ResourceLocation identifier = ResourceLocation.tryParse(rawId == null ? "" : rawId);
         if (identifier == null) return Items.AIR;
-        return BuiltInRegistries.ITEM.getValue(identifier);
+        return BuiltInRegistries.ITEM.getOptional(identifier).orElse(Items.AIR);
     }
 
-    private static Identifier parseIconIdentifier(CommandSourceStack source, String rawIdentifier) {
-        Identifier identifier = Identifier.tryParse(rawIdentifier == null ? "" : rawIdentifier);
+    private static ResourceLocation parseIconIdentifier(CommandSourceStack source, String rawIdentifier) {
+        ResourceLocation identifier = ResourceLocation.tryParse(rawIdentifier == null ? "" : rawIdentifier);
         if (identifier == null || !identifier.getPath().endsWith(".png")) {
             source.sendFailure(Component.translatable("red_envelope.error.bad_icon"));
             return null;

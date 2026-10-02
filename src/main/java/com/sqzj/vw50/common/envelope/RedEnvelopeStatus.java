@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.StringRepresentable;
-import org.jspecify.annotations.NonNull;
 
 public enum RedEnvelopeStatus implements StringRepresentable {
     ACTIVE("active"),
@@ -23,7 +22,7 @@ public enum RedEnvelopeStatus implements StringRepresentable {
     }
 
     @Override
-    public @NonNull String getSerializedName() {
+    public String getSerializedName() {
         return this.name;
     }
 }

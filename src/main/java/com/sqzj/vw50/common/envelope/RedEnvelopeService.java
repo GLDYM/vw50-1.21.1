@@ -6,13 +6,11 @@ import com.sqzj.vw50.server.network.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +24,7 @@ public class RedEnvelopeService {
     private static final Random RANDOM = new Random();
 
     public static RedEnvelopeSavedData getData(MinecraftServer server) {
-        return server.getDataStorage().computeIfAbsent(RedEnvelopeSavedData.TYPE);
+        return server.overworld().getDataStorage().computeIfAbsent(RedEnvelopeSavedData.TYPE, "vw50_red_envelopes");
     }
 
     public static int getRepeatMaxPerMinute(MinecraftServer server) {
@@ -49,16 +47,15 @@ public class RedEnvelopeService {
             return;
         }
 
-        List<ItemStack> stacks = menu.giftSlot.copyToList().stream().filter(stack -> !stack.isEmpty()).toList();
-        if (stacks.isEmpty()) {
+        ItemStack stack = menu.giftSlot.getItem(0);
+        if (stack.isEmpty()) {
             sendError(player, "red_envelope.error.empty_stack");
             return;
         }
 
-        ItemStack stack = stacks.getFirst().copy();
-        CreateResult result = create(player, stack, payload, false, false);
+        CreateResult result = create(player, stack.copy(), payload, false, false);
         if (result.created()) {
-            menu.giftSlot.set(0, ItemResource.of(stack), 0);
+            menu.giftSlot.setItem(0, ItemStack.EMPTY);
             consumeEmptyEnvelope(player);
             player.closeContainer();
         }
@@ -67,7 +64,7 @@ public class RedEnvelopeService {
     public static CreateResult create(ServerPlayer player, ItemStack stack, SendRedEnvelopePayload payload, boolean ignoreLimit, boolean systemEnvelope) {
         MinecraftServer server = player.server;
         long gameTime = server.overworld().getGameTime();
-        if (!ignoreLimit && !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+        if (!ignoreLimit && !player.hasPermissions(2)) {
             RedEnvelopeSavedData data = getData(server);
             Optional<SendLimitRecord> limit = data.getLimit(player.getUUID());
             if (limit.isPresent() && limit.get().blocked()) {
@@ -96,7 +93,7 @@ public class RedEnvelopeService {
         List<String> visible = exclusive.isBlank() ? List.of() : List.of(exclusive);
         RedEnvelopeRecord record = new RedEnvelopeRecord(
                 player.getUUID(),
-                player.getGameProfile().name(),
+                player.getGameProfile().getName(),
                 title,
                 "",
                 stack,
@@ -186,7 +183,7 @@ public class RedEnvelopeService {
         }
 
         RedEnvelopeRecord record = optional.get();
-        if (!record.isVisibleTo(player.getGameProfile().name())) {
+        if (!record.isVisibleTo(player.getGameProfile().getName())) {
             sendClaimResult(player, envelopeId, false, 0, "red_envelope.claim.hidden");
             return;
         }
@@ -207,7 +204,7 @@ public class RedEnvelopeService {
             return;
         }
 
-        if (!record.exclusiveUser.isBlank() && !record.exclusiveUser.equalsIgnoreCase(player.getGameProfile().name())) {
+        if (!record.exclusiveUser.isBlank() && !record.exclusiveUser.equalsIgnoreCase(player.getGameProfile().getName())) {
             sendClaimResult(player, envelopeId, false, 0, "red_envelope.claim.exclusive");
             return;
         }
@@ -219,7 +216,7 @@ public class RedEnvelopeService {
         }
 
         RedEnvelopeStatus before = record.status;
-        record.addClaim(player.getUUID(), player.getGameProfile().name(), amount, gameTime);
+        record.addClaim(player.getUUID(), player.getGameProfile().getName(), amount, gameTime);
         data.setDirty();
         sendClaimResult(player, envelopeId, true, amount, "red_envelope.claim.success");
         syncEnvelope(server, record);
@@ -276,7 +273,7 @@ public class RedEnvelopeService {
         MinecraftServer server = player.server;
         long gameTime = server.overworld().getGameTime();
         List<RedEnvelopeSnapshot> snapshots = getData(server).envelopes.stream()
-                .filter(record -> record.isVisibleTo(player.getGameProfile().name()))
+                .filter(record -> record.isVisibleTo(player.getGameProfile().getName()))
                 .filter(record -> record.status == RedEnvelopeStatus.ACTIVE)
                 .map(record -> RedEnvelopeSnapshot.of(record, player.getUUID(), gameTime)).toList();
         PacketDistributor.sendToPlayer(player, new RedEnvelopeSyncPayload(snapshots, true));
@@ -284,7 +281,7 @@ public class RedEnvelopeService {
 
     public static void broadcastEnvelope(MinecraftServer server, RedEnvelopeRecord record) {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (record.isVisibleTo(player.getGameProfile().name())) {
+            if (record.isVisibleTo(player.getGameProfile().getName())) {
                 PacketDistributor.sendToPlayer(player, new RedEnvelopeSyncPayload(List.of(RedEnvelopeSnapshot.of(record, player.getUUID(), server.overworld().getGameTime())), false));
             }
         }
@@ -301,7 +298,7 @@ public class RedEnvelopeService {
             if (record.isActive(gameTime)
                     && record.usePassword
                     && record.password.equals(rawText)
-                    && record.isVisibleTo(player.getGameProfile().name())) {
+                    && record.isVisibleTo(player.getGameProfile().getName())) {
                 queueClaim(player, record.id, true);
                 return;
             }
@@ -329,11 +326,11 @@ public class RedEnvelopeService {
 
     public static void setPlayerLimit(ServerPlayer executor, ServerPlayer target, int cooldownSeconds, boolean blocked) {
         RedEnvelopeSavedData data = getData(executor.server);
-        data.setLimit(new SendLimitRecord(target.getUUID(), target.getGameProfile().name(), Math.max(0, cooldownSeconds) * 20, blocked));
-        executor.sendSystemMessage(Component.translatable("red_envelope.permission.updated", target.getGameProfile().name()));
+        data.setLimit(new SendLimitRecord(target.getUUID(), target.getGameProfile().getName(), Math.max(0, cooldownSeconds) * 20, blocked));
+        executor.sendSystemMessage(Component.translatable("red_envelope.permission.updated", target.getGameProfile().getName()));
     }
 
-    public static Identifier normalizeIconIdentifier(Identifier identifier) {
+    public static ResourceLocation normalizeIconIdentifier(ResourceLocation identifier) {
         return RedEnvelopeStyleOptions.normalizeIconIdentifier(identifier);
     }
 

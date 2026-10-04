@@ -2,6 +2,7 @@ package com.sqzj.vw50.misc.hook;
 
 import com.sqzj.vw50.VW50;
 import com.sqzj.vw50.client.ClientRedEnvelopeManager;
+import com.sqzj.vw50.client.E33ChatCompat;
 import com.sqzj.vw50.common.envelope.RedEnvelopeStatus;
 import com.sqzj.vw50.misc.GuiMessageAttachment;
 import com.sqzj.vw50.misc.GuiMessageExtraData;
@@ -69,11 +70,16 @@ public final class HookChatComponent {
             lines.add(chat.trimmedMessages.get(i));
         }
         GuiMessageAttachment.putLines(message, lines, extraData);
+        E33ChatCompat.onMessageDisplayed(message, extraData);
     }
 
     public static RedEnvelopeLayout computeLayout(Minecraft minecraft, RedEnvelopeSnapshot snapshot) {
         ChatComponent chat = minecraft.gui.getChat();
-        int chatWidth = Math.max(RED_ENV_MIN_WIDTH, chat.getWidth());
+        return computeLayout(minecraft, snapshot, Math.max(RED_ENV_MIN_WIDTH, chat.getWidth()));
+    }
+
+    private static RedEnvelopeLayout computeLayout(Minecraft minecraft, RedEnvelopeSnapshot snapshot, int chatWidth) {
+        chatWidth = Math.max(RED_ENV_MIN_WIDTH, chatWidth);
         int senderWidth = minecraft.font.width(makeSenderText(snapshot));
         int desiredWidth = getDesiredCardWidth(minecraft, snapshot);
         int inlineAvailable = chatWidth - RED_ENV_LEFT - senderWidth - RED_ENV_INLINE_GAP;
@@ -82,7 +88,7 @@ public final class HookChatComponent {
         int cardWidth = clamp(desiredWidth, clamp(maxAvailable, 60, RED_ENV_MIN_WIDTH), clamp(maxAvailable, 60, RED_ENV_MAX_WIDTH));
         int cardHeight = getCardHeight(minecraft, snapshot, cardWidth);
         int totalHeight = wrapped ? VANILLA_MESSAGE_HEIGHT + RED_ENV_HEADER_GAP + cardHeight : cardHeight;
-        int entryHeight = Math.max(1, chat.getLineHeight());
+        int entryHeight = Math.max(1, minecraft.gui.getChat().getLineHeight());
         int placeholderLines = Math.max(1, (int) Math.ceil(Math.max(0, totalHeight - VANILLA_MESSAGE_HEIGHT) / (double) entryHeight) + 1);
         return new RedEnvelopeLayout(wrapped, cardWidth, cardHeight, totalHeight, placeholderLines);
     }
@@ -159,34 +165,98 @@ public final class HookChatComponent {
         InteractionTarget target = findInteractionTarget(chat, screenHeight, mouseX, mouseY);
         if (target == null) return false;
 
-        Minecraft minecraft = Minecraft.getInstance();
         if (target == CloseClaimPanelTarget.INSTANCE) {
             ClientRedEnvelopeManager.closeClaimList();
             return true;
         }
 
         if (target instanceof RedEnvelopeTarget redEnvelope) {
-            UUID id = redEnvelope.id();
-            RedEnvelopeSnapshot snapshot = ClientRedEnvelopeManager.getSnapshot(id);
-            if (snapshot != null && (snapshot.status() != RedEnvelopeStatus.ACTIVE || snapshot.viewerClaimed())) {
-                ClientRedEnvelopeManager.toggleClaimList(id);
-            } else if (snapshot != null && snapshot.usePassword()) {
-                if (!snapshot.password().isBlank()) {
-                    minecraft.keyboardHandler.setClipboard(snapshot.password());
-                    if (minecraft.player != null) minecraft.player.displayClientMessage(Component.translatable("red_envelope.chat.password_copied").withStyle(ChatFormatting.GOLD), true);
-                }
-            } else {
-                PacketDistributor.sendToServer(new ClaimRedEnvelopePayload(id));
-            }
-            return true;
+            return handleEnvelopeClick(redEnvelope.id());
         }
 
         if (target instanceof RepeatTarget repeat) {
-            String text = repeat.text().trim();
-            if (minecraft.player != null && !text.isBlank()) minecraft.player.connection.sendChat(text);
-            return true;
+            return handleRepeatClick(repeat.text());
         }
         return false;
+    }
+
+    public static boolean handleEnvelopeClick(UUID id) {
+        Minecraft minecraft = Minecraft.getInstance();
+        RedEnvelopeSnapshot snapshot = ClientRedEnvelopeManager.getSnapshot(id);
+        if (snapshot == null) return false;
+        if (snapshot.status() != RedEnvelopeStatus.ACTIVE || snapshot.viewerClaimed()) {
+            ClientRedEnvelopeManager.toggleClaimList(id);
+        } else if (snapshot.usePassword()) {
+            if (!snapshot.password().isBlank()) {
+                minecraft.keyboardHandler.setClipboard(snapshot.password());
+                if (minecraft.player != null) minecraft.player.displayClientMessage(Component.translatable("red_envelope.chat.password_copied").withStyle(ChatFormatting.GOLD), true);
+            }
+        } else {
+            PacketDistributor.sendToServer(new ClaimRedEnvelopePayload(id));
+        }
+        return true;
+    }
+
+    public static boolean handleRepeatClick(String repeatText) {
+        Minecraft minecraft = Minecraft.getInstance();
+        String text = repeatText.trim();
+        if (minecraft.player != null && !text.isBlank()) minecraft.player.connection.sendChat(text);
+        return true;
+    }
+
+    public record OverlayBounds(int left, int top, int right, int bottom) {
+        public int width() { return this.right - this.left; }
+        public int height() { return this.bottom - this.top; }
+    }
+
+    public static OverlayBounds renderEnvelopeBubble(GuiGraphics graphics, GuiMessageExtraData extraData,
+                                                      int panelX, int panelWidth, int baseY,
+                                                      float opacity, boolean hovered) {
+        Minecraft minecraft = Minecraft.getInstance();
+        RedEnvelopeSnapshot snapshot = extraData.redEnvelopeSnapshot;
+        RedEnvelopeLayout layout = computeLayout(minecraft, snapshot, Math.max(60, panelWidth - 16));
+        String senderText = makeSenderText(snapshot);
+        int senderWidth = minecraft.font.width(senderText);
+        int groupWidth = senderWidth + RED_ENV_INLINE_GAP + layout.cardWidth();
+        boolean wrapped = groupWidth > panelWidth - 16;
+        int top = baseY + 2;
+        int cardLeft;
+        int cardTop;
+        int senderLeft;
+        int senderTop;
+        if (wrapped) {
+            cardLeft = panelX + (panelWidth - layout.cardWidth()) / 2;
+            senderLeft = panelX + (panelWidth - senderWidth) / 2;
+            senderTop = top;
+            cardTop = top + VANILLA_MESSAGE_HEIGHT + RED_ENV_HEADER_GAP;
+        } else {
+            int groupLeft = panelX + (panelWidth - groupWidth) / 2;
+            senderLeft = groupLeft;
+            senderTop = top + Math.max(0, (layout.cardHeight() - VANILLA_MESSAGE_HEIGHT) / 2);
+            cardLeft = groupLeft + senderWidth + RED_ENV_INLINE_GAP;
+            cardTop = top;
+        }
+
+        renderSenderPrefix(graphics, extraData, senderLeft, senderTop, opacity);
+        renderRedEnvelope(graphics, extraData, cardLeft, cardTop, layout.cardWidth(), layout.cardHeight(), hovered, opacity);
+        return new OverlayBounds(cardLeft, cardTop, cardLeft + layout.cardWidth(), cardTop + layout.cardHeight());
+    }
+
+    public static OverlayBounds renderClaimListScreen(GuiGraphics graphics, int screenWidth, int screenHeight,
+                                                       int mouseX, int mouseY) {
+        RedEnvelopeSnapshot snapshot = ClientRedEnvelopeManager.getSelectedClaimListSnapshot().orElse(null);
+        if (snapshot == null) return null;
+        int rowCount = Math.max(1, snapshot.claims().size());
+        int width = clamp(screenWidth - 16, 140, CLAIM_PANEL_WIDTH);
+        int height = 25 + rowCount * CLAIM_PANEL_ROW_HEIGHT + 8;
+        int left = Math.max(8, screenWidth - width - 8);
+        int top = Math.max(8, (screenHeight - height) / 2);
+        int closeX = left + width - 16;
+        int closeY = top + 6;
+        Bounds close = new Bounds(closeX - 2, closeY - 2, closeX + 10, closeY + 10);
+        ClaimPanelLayout layout = new ClaimPanelLayout(left, top, width, height, close);
+        renderClaimListPanel(graphics, layout, snapshot, 1.0F, mouseX, mouseY);
+        return new OverlayBounds(close.left(), close.top(), close.right(), close.bottom());
     }
 
     private static InteractionTarget findInteractionTarget(ChatComponent chat, int screenHeight, int mouseX, int mouseY) {

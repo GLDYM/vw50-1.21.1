@@ -1,5 +1,6 @@
 package com.sqzj.vw50.misc;
 
+import com.sqzj.vw50.client.E33ChatCompat;
 import net.minecraft.client.GuiMessage;
 
 import java.util.ArrayList;
@@ -46,12 +47,15 @@ public class GuiMessageAttachment {
 
     public static void clearRepeatMarks() {
         EXTRA_DATA.forEach((message, extraData) -> extraData.canPlusOne = false);
+        E33ChatCompat.clearRepeatMarks();
     }
 
     public static void clear() {
         EXTRA_DATA.clear();
         LINE_DATA.clear();
         MESSAGE_LINES.clear();
+        E33ChatCompat.clearRepeatMarks();
+        E33ChatCompat.clearHitBoxes();
     }
 
 }

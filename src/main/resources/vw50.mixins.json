@@ -13,6 +13,8 @@
     },
     "client": [
         "MixinChatComponent",
-        "MixinChatScreen"
+        "MixinChatScreen",
+        "MixinE33ChatBubbleScreen",
+        "MixinE33ChatMessageRenderer"
     ]
 }

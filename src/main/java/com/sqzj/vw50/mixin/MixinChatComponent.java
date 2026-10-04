@@ -2,12 +2,14 @@ package com.sqzj.vw50.mixin;
 
 import com.sqzj.vw50.misc.GuiMessageAttachment;
 import com.sqzj.vw50.misc.GuiMessageExtraData;
+import com.sqzj.vw50.client.E33ChatCompat;
 import com.sqzj.vw50.misc.hook.HookChatComponent;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.GuiMessageTag;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ChatComponent;
@@ -43,8 +45,15 @@ public abstract class MixinChatComponent {
 
     @Inject(method = "render", at = @At(value = "TAIL", remap = false), remap = false)
     private void render(GuiGraphics graphics, int tick, int mouseX, int mouseY, boolean focused, CallbackInfo ci) {
+        if (E33ChatCompat.isBubbleScreen(Minecraft.getInstance().screen)) return;
         ChatComponent chat = (ChatComponent) (Object) this;
+        boolean shiftedByE33 = E33ChatCompat.isChatHudShifted();
+        if (shiftedByE33) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, -8.0F, 0.0F);
+        }
         HookChatComponent.renderChatOverlay(chat, graphics, tick, mouseX, mouseY, graphics.guiHeight(), focused);
+        if (shiftedByE33) graphics.pose().popPose();
     }
 
     @WrapOperation(

@@ -75,14 +75,12 @@ public final class ClientRedEnvelopeManager {
         return snapshot.claims().stream().filter(claim -> claim.amount() == max).toList();
     }
 
-    private static Component makeChatContent(RedEnvelopeSnapshot snapshot, HookChatComponent.RedEnvelopeLayout layout) {
-        String sender = snapshot.senderName().isBlank() ? "Server" : snapshot.senderName();
-        String label = Component.translatable("red_envelope.chat.card_title").getString();
+    private static Component makeChatContent(HookChatComponent.RedEnvelopeLayout layout) {
         StringBuilder builder = new StringBuilder();
-        builder.append("<").append(sender).append("> [").append(label).append("]");
         int lines = Math.max(1, layout.placeholderLines());
-        for (int i = 1; i < lines; i++) {
-            builder.append('\n').append(' ');
+        for (int i = 0; i < lines; i++) {
+            if (i > 0) builder.append('\n');
+            builder.append(' ');
         }
 
         return Component.literal(builder.toString());
@@ -111,7 +109,7 @@ public final class ClientRedEnvelopeManager {
         }
 
         ChatComponent chat = minecraft.gui.getChat();
-        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), makeChatContent(snapshot, layout), null, GuiMessageTag.systemSinglePlayer());
+        GuiMessage message = new GuiMessage(minecraft.gui.getGuiTicks(), makeChatContent(layout), null, GuiMessageTag.systemSinglePlayer());
         GuiMessageExtraData data = GuiMessageExtraData.redEnvelope(snapshot);
         applyLayout(data, layout);
         GuiMessageAttachment.put(message, data);

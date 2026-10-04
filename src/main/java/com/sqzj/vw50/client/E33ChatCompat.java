@@ -20,8 +20,8 @@ import java.util.UUID;
 public final class E33ChatCompat {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String STORE_CLASS = "com.niuqu.chatbubble.ChatMessageStore";
-    private static final String CONFIG_CLASS = "com.niuqu.chatbubble.ChatBubbleConfig";
+    private static final String STORE_CLASS = "com.niuqu.chatbubble.store.ChatMessageStore";
+    private static final String CONFIG_CLASS = "com.niuqu.chatbubble.config.ChatBubbleConfig";
     private static final List<ComponentAttachment> COMPONENT_DATA = new ArrayList<>();
     private static final List<MessageAttachment> MESSAGE_DATA = new ArrayList<>();
     private static final List<RepeatAttachment> REPEAT_DATA = new ArrayList<>();
@@ -59,7 +59,7 @@ public final class E33ChatCompat {
     }
 
     public static boolean isBubbleScreen(Object screen) {
-        return screen != null && screen.getClass().getName().equals("com.niuqu.chatbubble.ChatBubbleScreen");
+        return screen != null && screen.getClass().getName().equals("com.niuqu.chatbubble.render.ChatBubbleScreen");
     }
 
     public static boolean isChatHudShifted() {

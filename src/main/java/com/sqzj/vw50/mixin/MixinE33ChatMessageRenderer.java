@@ -28,7 +28,8 @@ public abstract class MixinE33ChatMessageRenderer {
                                        int ownBubbleColor, int otherBubbleColor, int ownTextColor, int otherTextColor,
                                        boolean own, int cornerRadius, @Coerce Object colors, ResourceLocation skin,
                                        int searchHighlightIndex, int bubbleMaxWidth, List<int[]> bubbleRects,
-                                       List<?> clickableSpans, float alpha, CallbackInfo ci) {
+                                       List<?> clickableSpans, List<?> textSpans, @Coerce Object selection,
+                                       float alpha, boolean drawSelection, CallbackInfo ci) {
         GuiMessageExtraData data = E33ChatCompat.getMessageData(message);
         if (data == null) {
             if (E33ChatCompat.isLegacyEnvelopePlaceholder(message)) ci.cancel();
@@ -54,7 +55,8 @@ public abstract class MixinE33ChatMessageRenderer {
                                           int ownBubbleColor, int otherBubbleColor, int ownTextColor, int otherTextColor,
                                           boolean own, int cornerRadius, @Coerce Object colors, ResourceLocation skin,
                                           int searchHighlightIndex, int bubbleMaxWidth, List<int[]> bubbleRects,
-                                          List<?> clickableSpans, float alpha, CallbackInfo ci) {
+                                          List<?> clickableSpans, List<?> textSpans, @Coerce Object selection,
+                                          float alpha, boolean drawSelection, CallbackInfo ci) {
         GuiMessageExtraData data = E33ChatCompat.getMessageData(message);
         if (data != null && data.isRedEnvelopeFinishNotice) {
             Component content = E33ChatCompat.getMessageContent(message);

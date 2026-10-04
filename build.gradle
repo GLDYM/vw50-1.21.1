@@ -73,6 +73,7 @@ configurations {
 }
 
 dependencies {
+    implementation files('libs/e33chat-NeoForge-1.21.1-2.4.16.jar')
     annotationProcessor 'org.spongepowered:mixin:0.8.7:processor'
 }
 

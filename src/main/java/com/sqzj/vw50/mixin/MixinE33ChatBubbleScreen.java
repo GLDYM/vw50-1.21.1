@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
-@Mixin(targets = "com.niuqu.chatbubble.ChatBubbleScreen", remap = false)
+@Mixin(targets = "com.niuqu.chatbubble.render.ChatBubbleScreen", remap = false)
 public abstract class MixinE33ChatBubbleScreen {
 
     @Inject(method = "render", at = @At("HEAD"), remap = false)
